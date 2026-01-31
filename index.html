@@ -5,68 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ROBLOX Tracker - Live Game Analytics</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Login/Signup Modal -->
-    <div id="auth-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Welcome to ROBLOX Tracker</h2>
-                <p class="modal-subtitle">Track your favorite ROBLOX games in real-time</p>
-            </div>
-            
-            <!-- Login Form -->
-            <div id="login-form" class="auth-form">
-                <div class="form-group">
-                    <label for="login-username">Username</label>
-                    <input type="text" id="login-username" placeholder="Enter your username" required>
-                </div>
-                <div class="form-group">
-                    <label for="login-password">Password</label>
-                    <input type="password" id="login-password" placeholder="Enter your password" required>
-                </div>
-                <div id="login-error" class="error-message"></div>
-                <button id="login-submit" class="btn-primary">Login</button>
-                <p class="form-switch">Don't have an account? <a href="#" id="show-signup">Sign up here</a></p>
-            </div>
-
-            <!-- Signup Form -->
-            <div id="signup-form" class="auth-form hidden">
-                <div class="form-group">
-                    <label for="signup-username">Username</label>
-                    <input type="text" id="signup-username" placeholder="Choose a username" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-email">Email</label>
-                    <input type="email" id="signup-email" placeholder="Enter your email" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-password">Password</label>
-                    <input type="password" id="signup-password" placeholder="Create a password (min 6 characters)" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-password-confirm">Confirm Password</label>
-                    <input type="password" id="signup-password-confirm" placeholder="Confirm your password" required>
-                </div>
-                <div id="signup-error" class="error-message"></div>
-                <button id="signup-submit" class="btn-primary">Create Account</button>
-                <p class="form-switch">Already have an account? <a href="#" id="show-login">Login here</a></p>
-            </div>
-        </div>
-    </div>
-
     <!-- Main Application -->
     <div id="app" class="hidden">
         <!-- Navigation -->
         <nav class="navbar">
             <div class="nav-container">
                 <div class="nav-brand">
-                    <h1>🎮 ROBLOX Tracker</h1>
+                    <div class="roblox-square-small"></div>
+                    <h1>ROBLOX TRACKER</h1>
                 </div>
                 <div class="nav-menu">
-                    <span id="user-display" class="user-info">Welcome, User!</span>
-                    <button id="logout-btn" class="btn-secondary">Logout</button>
+                    <span id="user-display" class="user-info">Welcome!</span>
+                    <button id="logout-btn" class="btn-roblox-secondary">Logout</button>
                 </div>
             </div>
         </nav>
@@ -77,7 +31,7 @@
                 
                 <!-- Stats Overview -->
                 <div class="stats-grid">
-                    <div class="stat-card">
+                    <div class="stat-card stat-red">
                         <div class="stat-icon">👥</div>
                         <div class="stat-info">
                             <h3>Live Players</h3>
@@ -86,7 +40,7 @@
                         </div>
                     </div>
                     
-                    <div class="stat-card">
+                    <div class="stat-card stat-blue">
                         <div class="stat-icon">🎮</div>
                         <div class="stat-info">
                             <h3>Games Tracked</h3>
@@ -95,7 +49,7 @@
                         </div>
                     </div>
                     
-                    <div class="stat-card">
+                    <div class="stat-card stat-red">
                         <div class="stat-icon">⭐</div>
                         <div class="stat-info">
                             <h3>Favorites</h3>
@@ -104,7 +58,7 @@
                         </div>
                     </div>
                     
-                    <div class="stat-card">
+                    <div class="stat-card stat-blue">
                         <div class="stat-icon">🔥</div>
                         <div class="stat-info">
                             <h3>Trending</h3>
@@ -117,7 +71,7 @@
                 <!-- Live Games Section -->
                 <section class="section">
                     <div class="section-header">
-                        <h2>🔴 Live Now</h2>
+                        <h2>🔴 LIVE NOW</h2>
                         <div class="search-bar">
                             <input type="text" id="game-search" placeholder="Search games...">
                         </div>
@@ -131,12 +85,12 @@
                 <!-- Developer Panel -->
                 <section class="section">
                     <div class="section-header">
-                        <h2>👨‍💻 Developer Panel</h2>
+                        <h2>👨‍💻 DEVELOPER PANEL</h2>
                     </div>
                     <div class="developer-panel">
                         <div class="panel-content">
                             <p>Connect your developer account to access advanced analytics and API features.</p>
-                            <button class="btn-primary">Connect Developer Account</button>
+                            <button class="btn-roblox">Connect Developer Account</button>
                         </div>
                     </div>
                 </section>
@@ -146,10 +100,11 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>&copy; 2026 jbvcommunity-hue. All Rights Reserved.</p>
+            <p>&copy; 2026 ROBLOX Tracker by jbvcommunity-hue | Not affiliated with Roblox Corporation</p>
         </footer>
     </div>
 
+    <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

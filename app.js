@@ -2,8 +2,13 @@
 let currentUser = null;
 let authToken = null;
 
-// API Base URL
-const API_URL = window.location.origin;
+// API Base URL - loaded from config.js
+const API_URL = CONFIG.BACKEND_URL;
+
+// Check if backend URL is configured
+if (API_URL === 'YOUR_BACKEND_URL_HERE') {
+    console.warn('⚠️ WARNING: Backend URL not configured! Please edit config.js with your backend server URL');
+}
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,89 +23,84 @@ function checkAuth() {
     
     if (authToken && username) {
         currentUser = { username };
-        showApp();
+        // If on login/signup page, redirect to main app
+        if (window.location.pathname.includes('log-in') || window.location.pathname.includes('sign-up')) {
+            window.location.href = '/';
+        } else {
+            showApp();
+        }
     } else {
-        showAuthModal();
+        // If on main page but not logged in, redirect to login
+        if (!window.location.pathname.includes('log-in') && !window.location.pathname.includes('sign-up')) {
+            // Only redirect if we're on the main page
+            if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+                window.location.href = '/log-in.html';
+            }
+        }
     }
 }
 
 // Setup event listeners
 function setupEventListeners() {
     // Login form
-    document.getElementById('login-submit').addEventListener('click', handleLogin);
-    document.getElementById('login-password').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-    });
-    
-    // Signup form
-    document.getElementById('signup-submit').addEventListener('click', handleSignup);
-    document.getElementById('signup-password-confirm').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSignup();
-    });
-    
-    // Form switching
-    document.getElementById('show-signup').addEventListener('click', (e) => {
-        e.preventDefault();
-        showSignupForm();
-    });
-    
-    document.getElementById('show-login').addEventListener('click', (e) => {
-        e.preventDefault();
-        showLoginForm();
-    });
-    
-    // Logout
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
-    
-    // Search
-    document.getElementById('game-search').addEventListener('input', handleSearch);
-}
-
-// Show/Hide Forms
-function showLoginForm() {
-    document.getElementById('login-form').classList.remove('hidden');
-    document.getElementById('signup-form').classList.add('hidden');
-    document.getElementById('modal-title').textContent = 'Welcome Back!';
-    clearErrors();
-}
-
-function showSignupForm() {
-    document.getElementById('login-form').classList.add('hidden');
-    document.getElementById('signup-form').classList.remove('hidden');
-    document.getElementById('modal-title').textContent = 'Create Account';
-    clearErrors();
-}
-
-function showAuthModal() {
-    document.getElementById('auth-modal').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
-}
-
-function showApp() {
-    document.getElementById('auth-modal').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    
-    if (currentUser) {
-        document.getElementById('user-display').textContent = `Welcome, ${currentUser.username}!`;
+    const loginBtn = document.getElementById('login-submit');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', handleLogin);
+        const loginPassword = document.getElementById('login-password');
+        if (loginPassword) {
+            loginPassword.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleLogin();
+            });
+        }
     }
     
-    loadGames();
-    startPlayerCountUpdate();
+    // Signup form
+    const signupBtn = document.getElementById('signup-submit');
+    if (signupBtn) {
+        signupBtn.addEventListener('click', handleSignup);
+        const signupConfirm = document.getElementById('signup-password-confirm');
+        if (signupConfirm) {
+            signupConfirm.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleSignup();
+            });
+        }
+    }
+    
+    // Logout
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+    
+    // Search
+    const searchInput = document.getElementById('game-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', handleSearch);
+    }
 }
 
 // Clear error messages
 function clearErrors() {
-    document.getElementById('login-error').classList.remove('show');
-    document.getElementById('signup-error').classList.remove('show');
-    document.getElementById('login-error').textContent = '';
-    document.getElementById('signup-error').textContent = '';
+    const loginError = document.getElementById('login-error');
+    const signupError = document.getElementById('signup-error');
+    
+    if (loginError) {
+        loginError.classList.remove('show');
+        loginError.textContent = '';
+    }
+    if (signupError) {
+        signupError.classList.remove('show');
+        signupError.textContent = '';
+    }
 }
 
 // Show error message
 function showError(elementId, message) {
     const errorElement = document.getElementById(elementId);
-    errorElement.textContent = message;
-    errorElement.classList.add('show');
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.classList.add('show');
+    }
 }
 
 // Handle Login
@@ -137,13 +137,14 @@ async function handleLogin() {
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('username', currentUser.username);
             
-            showApp();
+            // Redirect to main app
+            window.location.href = '/';
         } else {
             showError('login-error', data.error || 'Login failed');
         }
     } catch (error) {
         console.error('Login error:', error);
-        showError('login-error', 'Network error. Please try again.');
+        showError('login-error', '❌ Network error. Check if your backend server is running and the URL in config.js is correct.');
     } finally {
         submitBtn.textContent = 'Login';
         submitBtn.disabled = false;
@@ -197,20 +198,14 @@ async function handleSignup() {
         const data = await response.json();
         
         if (response.ok) {
-            // Account created, now log in
-            document.getElementById('login-username').value = username;
-            document.getElementById('login-password').value = password;
-            showLoginForm();
-            showError('login-error', '✅ Account created! Please log in.');
-            document.getElementById('login-error').style.background = 'rgba(0, 230, 118, 0.1)';
-            document.getElementById('login-error').style.borderLeftColor = 'var(--success)';
-            document.getElementById('login-error').style.color = 'var(--success)';
+            // Account created, redirect to login
+            window.location.href = '/log-in.html?success=Account created! Please log in.';
         } else {
             showError('signup-error', data.error || 'Signup failed');
         }
     } catch (error) {
         console.error('Signup error:', error);
-        showError('signup-error', 'Network error. Please try again.');
+        showError('signup-error', '❌ Network error. Check if your backend server is running and the URL in config.js is correct.');
     } finally {
         submitBtn.textContent = 'Create Account';
         submitBtn.disabled = false;
@@ -224,19 +219,33 @@ function handleLogout() {
     authToken = null;
     currentUser = null;
     
-    // Clear forms
-    document.getElementById('login-username').value = '';
-    document.getElementById('login-password').value = '';
-    
-    showAuthModal();
-    showLoginForm();
+    window.location.href = '/log-in.html';
+}
+
+// Show app (for main page only)
+function showApp() {
+    const app = document.getElementById('app');
+    if (app) {
+        app.classList.remove('hidden');
+        
+        if (currentUser) {
+            const userDisplay = document.getElementById('user-display');
+            if (userDisplay) {
+                userDisplay.textContent = `Welcome, ${currentUser.username}!`;
+            }
+        }
+        
+        loadGames();
+        startPlayerCountUpdate();
+    }
 }
 
 // Load Games
 function loadGames() {
     const gamesContainer = document.getElementById('games-list');
+    if (!gamesContainer) return;
     
-    // Sample game data (in production, fetch from API)
+    // Sample ROBLOX game data
     const games = [
         { id: 1, name: 'Adopt Me!', icon: '🐾', players: 245678, visits: '45.2B' },
         { id: 2, name: 'Brookhaven', icon: '🏡', players: 189234, visits: '32.8B' },
@@ -279,10 +288,13 @@ async function updatePlayerCount() {
         const response = await fetch(`${API_URL}/api/players`);
         const data = await response.json();
         
-        const currentCount = parseInt(document.getElementById('total-players').textContent.replace(/,/g, '')) || 0;
-        const newCount = data.playerCount;
-        
-        animateNumber('total-players', currentCount, newCount, 1000);
+        const totalPlayers = document.getElementById('total-players');
+        if (totalPlayers) {
+            const currentCount = parseInt(totalPlayers.textContent.replace(/,/g, '')) || 0;
+            const newCount = data.playerCount;
+            
+            animateNumber('total-players', currentCount, newCount, 1000);
+        }
     } catch (error) {
         console.error('Error fetching player count:', error);
     }
@@ -291,6 +303,8 @@ async function updatePlayerCount() {
 // Animate number change
 function animateNumber(elementId, start, end, duration) {
     const element = document.getElementById(elementId);
+    if (!element) return;
+    
     const startTime = Date.now();
     const difference = end - start;
     
@@ -328,6 +342,24 @@ function handleSearch(e) {
             card.style.display = 'none';
         }
     });
+}
+
+// Show success message from URL parameter (for login page after signup)
+if (window.location.pathname.includes('log-in')) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const successMsg = urlParams.get('success');
+    if (successMsg) {
+        setTimeout(() => {
+            const loginError = document.getElementById('login-error');
+            if (loginError) {
+                loginError.textContent = '✅ ' + successMsg;
+                loginError.style.background = 'rgba(0, 230, 118, 0.1)';
+                loginError.style.borderLeftColor = '#00e676';
+                loginError.style.color = '#00e676';
+                loginError.classList.add('show');
+            }
+        }, 100);
+    }
 }
 
 // Cleanup on page unload

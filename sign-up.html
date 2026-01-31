@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - ROBLOX Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="roblox-logo">
+                    <div class="roblox-square"></div>
+                    <h1>ROBLOX TRACKER</h1>
+                </div>
+                <h2>Create Account</h2>
+                <p class="auth-subtitle">Join the community and start tracking</p>
+            </div>
+            
+            <form class="auth-form" id="signup-form" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="signup-username">Username</label>
+                    <input type="text" id="signup-username" placeholder="Choose a username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="Enter your email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="Create a password (min 6 characters)" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="signup-password-confirm">Confirm Password</label>
+                    <input type="password" id="signup-password-confirm" placeholder="Confirm your password" required autocomplete="new-password">
+                </div>
+                <div id="signup-error" class="error-message"></div>
+                <button type="submit" id="signup-submit" class="btn-roblox">Create Account</button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Already have an account? <a href="/log-in.html">Login here</a></p>
+            </div>
+        </div>
+
+        <div class="auth-decorations">
+            <div class="roblox-block block-1"></div>
+            <div class="roblox-block block-2"></div>
+            <div class="roblox-block block-3"></div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
