@@ -6,7 +6,7 @@ const CONFIG = {
     // - https://api.yoursite.com
     // - https://your-repl.replit.app
     
-    BACKEND_URL: 'http://localhost:3000/',
+    BACKEND_URL: 'https://roblox-tracker-9jjf.onrender.com/',
     
     // If your backend is on the same domain, you can use:
     // BACKEND_URL: window.location.origin
