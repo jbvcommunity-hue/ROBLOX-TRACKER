@@ -6,8 +6,8 @@ let authToken = null;
 const API_URL = CONFIG.BACKEND_URL;
 
 // Check if backend URL is configured
-if (API_URL === 'YOUR_BACKEND_URL_HERE') {
-    console.warn('⚠️ WARNING: Backend URL not configured! Please edit config.js with your backend server URL');
+if (API_URL === 'https://roblox-tracker-9jjf.onrender.com') {
+    console.warn('WARNING: Backend URL not configured! Please edit config.js with your backend server URL');
 }
 
 // Initialize app
@@ -20,19 +20,25 @@ document.addEventListener('DOMContentLoaded', () => {
 function checkAuth() {
     authToken = localStorage.getItem('authToken');
     const username = localStorage.getItem('username');
-    
+    const isGuest = localStorage.getItem('guestMode') === 'true';
+
     if (authToken && username) {
         currentUser = { username };
-        // If on login/signup page, redirect to main app
+        localStorage.removeItem('guestMode'); // Clear guest if logged in
+        if (window.location.pathname.includes('log-in') || window.location.pathname.includes('sign-up')) {
+            window.location.href = '/';
+        } else {
+            showApp();
+        }
+    } else if (isGuest) {
+        currentUser = { username: 'Guest' };
         if (window.location.pathname.includes('log-in') || window.location.pathname.includes('sign-up')) {
             window.location.href = '/';
         } else {
             showApp();
         }
     } else {
-        // If on main page but not logged in, redirect to login
         if (!window.location.pathname.includes('log-in') && !window.location.pathname.includes('sign-up')) {
-            // Only redirect if we're on the main page
             if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
                 window.location.href = '/log-in.html';
             }
@@ -77,6 +83,10 @@ function setupEventListeners() {
     if (searchInput) {
         searchInput.addEventListener('input', handleSearch);
     }
+
+    // Guest button
+    const guestBtn = document.getElementById('guest-btn');
+    if (guestBtn) { guestBtn.addEventListener('click', handleGuest); }
 }
 
 // Clear error messages
@@ -144,7 +154,7 @@ async function handleLogin() {
         }
     } catch (error) {
         console.error('Login error:', error);
-        showError('login-error', '❌ Network error. Check if your backend server is running and the URL in config.js is correct.');
+        showError('login-error', 'Network error. Check if your backend server is running and the URL in config.js is correct.');
     } finally {
         submitBtn.textContent = 'Login';
         submitBtn.disabled = false;
@@ -205,20 +215,26 @@ async function handleSignup() {
         }
     } catch (error) {
         console.error('Signup error:', error);
-        showError('signup-error', '❌ Network error. Check if your backend server is running and the URL in config.js is correct.');
+        showError('signup-error', 'Network error. Check if your backend server is running and the URL in config.js is correct.');
     } finally {
         submitBtn.textContent = 'Create Account';
         submitBtn.disabled = false;
     }
 }
 
+// Handle Guest
+function handleGuest() {
+    localStorage.setItem('guestMode', 'true');
+    window.location.href = '/';
+}
+
 // Handle Logout
 function handleLogout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('username');
+    localStorage.removeItem('guestMode');
     authToken = null;
     currentUser = null;
-    
     window.location.href = '/log-in.html';
 }
 
@@ -247,14 +263,14 @@ function loadGames() {
     
     // Sample ROBLOX game data
     const games = [
-        { id: 1, name: 'Adopt Me!', icon: '🐾', players: 245678, visits: '45.2B' },
-        { id: 2, name: 'Brookhaven', icon: '🏡', players: 189234, visits: '32.8B' },
-        { id: 3, name: 'Tower of Hell', icon: '🗼', players: 156789, visits: '28.1B' },
-        { id: 4, name: 'Blox Fruits', icon: '🍊', players: 234567, visits: '41.3B' },
-        { id: 5, name: 'Pet Simulator X', icon: '🐶', players: 145678, visits: '25.4B' },
-        { id: 6, name: 'Murder Mystery 2', icon: '🔪', players: 98765, visits: '18.9B' },
-        { id: 7, name: 'Jailbreak', icon: '🚔', players: 87654, visits: '16.2B' },
-        { id: 8, name: 'Arsenal', icon: '🔫', players: 76543, visits: '14.7B' },
+        { id: 1, name: 'Adopt Me!', icon: 'Paw prints', players: 245678, visits: '45.2B' },
+        { id: 2, name: 'Brookhaven', icon: 'House', players: 189234, visits: '32.8B' },
+        { id: 3, name: 'Tower of Hell', icon: 'Tower', players: 156789, visits: '28.1B' },
+        { id: 4, name: 'Blox Fruits', icon: 'Orange', players: 234567, visits: '41.3B' },
+        { id: 5, name: 'Pet Simulator X', icon: 'Dog', players: 145678, visits: '25.4B' },
+        { id: 6, name: 'Murder Mystery 2', icon: 'Knife', players: 98765, visits: '18.9B' },
+        { id: 7, name: 'Jailbreak', icon: 'Police car', players: 87654, visits: '16.2B' },
+        { id: 8, name: 'Arsenal', icon: 'Gun', players: 76543, visits: '14.7B' },
     ];
     
     gamesContainer.innerHTML = games.map(game => `
@@ -268,7 +284,7 @@ function loadGames() {
                         <span>${formatNumber(game.players)}</span>
                     </div>
                     <div class="game-stat">
-                        👁️ <span>${game.visits}</span>
+                        Eye <span>${game.visits}</span>
                     </div>
                 </div>
             </div>
@@ -352,7 +368,7 @@ if (window.location.pathname.includes('log-in')) {
         setTimeout(() => {
             const loginError = document.getElementById('login-error');
             if (loginError) {
-                loginError.textContent = '✅ ' + successMsg;
+                loginError.textContent = 'Success ' + successMsg;
                 loginError.style.background = 'rgba(0, 230, 118, 0.1)';
                 loginError.style.borderLeftColor = '#00e676';
                 loginError.style.color = '#00e676';
