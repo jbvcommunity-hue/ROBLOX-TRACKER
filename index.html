@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BloxWatch Ultra</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="logo">BLOXWATCH <span style="color:#00A2FF">ULTRA</span></div>
+        <div class="tabs">
+            <button onclick="switchTab('game')" class="active">Game Tracker</button>
+            <button onclick="switchTab('user')">User Tracker</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Paste Game Link or Username...">
+            <button onclick="handleSearch()">SEARCH</button>
+        </div>
+
+        <div class="history-bar" id="historyList">
+            <span>Recent:</span>
+            </div>
+
+        <div id="gameDashboard" class="dashboard hidden">
+            <div class="header-card">
+                <img id="gameIcon" src="" class="main-icon">
+                <div class="header-info">
+                    <h1 id="gameTitle">Loading...</h1>
+                    <p id="gameDev">By: <span id="gameCreator">...</span></p>
+                    <div class="badge-row">
+                        <span class="badge" id="gameGenre">Genre</span>
+                        <span class="badge" id="gameUpdated">Updated: Today</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="card">
+                    <h3>🟢 Active Players</h3>
+                    <h2 id="statPlaying">0</h2>
+                </div>
+                <div class="card">
+                    <h3>Total Visits</h3>
+                    <h2 id="statVisits">0</h2>
+                </div>
+                <div class="card">
+                    <h3>⭐ Favorites</h3>
+                    <h2 id="statFavs">0</h2>
+                </div>
+                <div class="card">
+                    <h3>👍 Likes</h3>
+                    <h2 id="statLikes">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <div id="userDashboard" class="dashboard hidden" style="display:none;">
+            <div class="user-profile">
+                <img id="userAvatar" src="" class="avatar-3d">
+                <div class="user-info">
+                    <h1 id="userDisplay">Display Name</h1>
+                    <h3 id="userName">@username</h3>
+                    <p id="userBio">Loading bio...</p>
+                    
+                    <div class="status-box" id="userStatusBox">
+                        <div class="status-dot" id="statusDot"></div>
+                        <span id="userStatusText">Offline</span>
+                    </div>
+                    <p id="userLocation" class="location-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
