@@ -14,7 +14,9 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors());
-app.use(express.static(path.join(__dirname)));
+
+// Serve static files from the current directory
+app.use(express.static(__dirname));
 
 // Connect to Database
 const dbURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/roblox-tracker';
@@ -22,8 +24,8 @@ mongoose.connect(dbURI, {
     useNewUrlParser: true, 
     useUnifiedTopology: true 
 })
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => console.log('✅ Connected to MongoDB'))
+.catch(err => console.error('❌ MongoDB connection error:', err));
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -35,14 +37,10 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-// Serve index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+// API Routes
 
 // Google OAuth callback endpoint
 app.get('/auth/google/callback', (req, res) => {
-    // Handle Google OAuth callback
     res.json({ message: 'Google OAuth callback - implement with your credentials' });
 });
 
@@ -149,7 +147,6 @@ app.get('/profile', authenticateJWT, async (req, res) => {
 });
 
 app.post('/logout', authenticateJWT, (req, res) => {
-    // Client-side should remove token
     res.json({ message: 'Logged out successfully' });
 });
 
@@ -166,8 +163,6 @@ app.delete('/account', authenticateJWT, async (req, res) => {
 // Enhanced game data endpoint
 app.get('/games', async (req, res) => {
     try {
-        // Fetch and return game data with metadata
-        // This would integrate with Roblox API
         res.json({ 
             message: 'Game data endpoint - integrate with Roblox API',
             games: []
@@ -178,14 +173,26 @@ app.get('/games', async (req, res) => {
     }
 });
 
-// Player count endpoint
+// Player count endpoint (returns random demo data)
 app.get('/api/players', (req, res) => {
-    // This would fetch real data from Roblox API
-    res.json({ playerCount: Math.floor(Math.random() * 10000) });
+    const baseCount = 850000;
+    const variance = Math.floor(Math.random() * 100000) - 50000;
+    const playerCount = baseCount + variance;
+    res.json({ playerCount });
+});
+
+// Serve index.html for root route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Visit http://localhost:${PORT} to view the app`);
+    console.log('');
+    console.log('🚀 ROBLOX Tracker Server Started!');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📍 Server: http://localhost:${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('');
 });

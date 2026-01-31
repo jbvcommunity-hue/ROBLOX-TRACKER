@@ -3,71 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROBLOX Tracker</title>
+    <title>ROBLOX Tracker - Live Game Analytics</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>ROBLOX Tracker</h1>
-            <button id="login-btn" class="button">Login with Google</button>
-        </header>
-        <div id="dashboard" class="hidden">
-            <h2>User Dashboard</h2>
-            <div class="live-player-count card">
-                <h3>Live Player Count: <span id="player-count">0</span></h3>
+    <!-- Login/Signup Modal -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Welcome to ROBLOX Tracker</h2>
+                <p class="modal-subtitle">Track your favorite ROBLOX games in real-time</p>
             </div>
-            <div class="developer-panel card">
-                <h3>Developer Connection Panel</h3>
-                <p id="dev-info">No developers connected.</p>
+            
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" placeholder="Enter your username" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password" required>
+                </div>
+                <div id="login-error" class="error-message"></div>
+                <button id="login-submit" class="btn-primary">Login</button>
+                <p class="form-switch">Don't have an account? <a href="#" id="show-signup">Sign up here</a></p>
             </div>
-            <div class="account-management card">
-                <h3>Account Management</h3>
-                <p>Manage your account settings here.</p>
+
+            <!-- Signup Form -->
+            <div id="signup-form" class="auth-form hidden">
+                <div class="form-group">
+                    <label for="signup-username">Username</label>
+                    <input type="text" id="signup-username" placeholder="Choose a username" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="Create a password (min 6 characters)" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-password-confirm">Confirm Password</label>
+                    <input type="password" id="signup-password-confirm" placeholder="Confirm your password" required>
+                </div>
+                <div id="signup-error" class="error-message"></div>
+                <button id="signup-submit" class="btn-primary">Create Account</button>
+                <p class="form-switch">Already have an account? <a href="#" id="show-login">Login here</a></p>
             </div>
         </div>
-        <footer>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="hidden">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <h1>🎮 ROBLOX Tracker</h1>
+                </div>
+                <div class="nav-menu">
+                    <span id="user-display" class="user-info">Welcome, User!</span>
+                    <button id="logout-btn" class="btn-secondary">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                
+                <!-- Stats Overview -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3>Live Players</h3>
+                            <p class="stat-value" id="total-players">0</p>
+                            <span class="stat-change positive">↑ 12.5%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">🎮</div>
+                        <div class="stat-info">
+                            <h3>Games Tracked</h3>
+                            <p class="stat-value">156</p>
+                            <span class="stat-change">+23 today</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-info">
+                            <h3>Favorites</h3>
+                            <p class="stat-value">42</p>
+                            <span class="stat-change positive">↑ 8</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-info">
+                            <h3>Trending</h3>
+                            <p class="stat-value">18</p>
+                            <span class="stat-change positive">↑ 5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Games Section -->
+                <section class="section">
+                    <div class="section-header">
+                        <h2>🔴 Live Now</h2>
+                        <div class="search-bar">
+                            <input type="text" id="game-search" placeholder="Search games...">
+                        </div>
+                    </div>
+                    
+                    <div class="games-grid" id="games-list">
+                        <!-- Game cards will be inserted here -->
+                    </div>
+                </section>
+
+                <!-- Developer Panel -->
+                <section class="section">
+                    <div class="section-header">
+                        <h2>👨‍💻 Developer Panel</h2>
+                    </div>
+                    <div class="developer-panel">
+                        <div class="panel-content">
+                            <p>Connect your developer account to access advanced analytics and API features.</p>
+                            <button class="btn-primary">Connect Developer Account</button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
             <p>&copy; 2026 jbvcommunity-hue. All Rights Reserved.</p>
         </footer>
     </div>
-    <script>
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.database();
 
-        $("#login-btn").click(function() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).then((result) => {
-                const user = result.user;
-                console.log(user);
-                $('#dashboard').removeClass('hidden');
-                updatePlayerCount();
-            }).catch((error) => {
-                console.error("Error during login: ", error);
-            });
-        });
-
-        function updatePlayerCount() {
-            setInterval(() => {
-                // Fetch the live player count from your Firebase database here.
-                db.ref('livePlayerCount').once('value').then((snapshot) => {
-                    const count = snapshot.val();
-                    $('#player-count').text(count);
-                });
-            }, 10000); // Update every 10 seconds
-        }
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
