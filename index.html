@@ -3,76 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BloxWatch Ultra</title>
+    <title>BloxWatch ULTRA</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div class="navbar">
-        <div class="logo">BLOXWATCH <span style="color:#00A2FF">ULTRA</span></div>
-        <div class="tabs">
-            <button onclick="switchTab('game')" class="active">Game Tracker</button>
-            <button onclick="switchTab('user')">User Tracker</button>
-        </div>
-    </div>
+    <div id="statusIndicator" class="status-offline">Connecting to Server...</div>
 
-    <div class="container">
-        <div class="search-box">
+    <div class="app-wrapper">
+        <div class="header">
+            <div class="logo">BLOXWATCH <span class="highlight">ULTRA</span></div>
+            <div class="nav">
+                <button id="btnGame" class="nav-btn active" onclick="setMode('game')">GAME TRACKER</button>
+                <button id="btnUser" class="nav-btn" onclick="setMode('user')">USER TRACKER</button>
+            </div>
+        </div>
+
+        <div class="search-container">
             <input type="text" id="searchInput" placeholder="Paste Game Link or Username...">
-            <button onclick="handleSearch()">SEARCH</button>
+            <button onclick="search()">SEARCH</button>
         </div>
 
-        <div class="history-bar" id="historyList">
-            <span>Recent:</span>
+        <div id="historyBar" class="history-bar">
             </div>
 
-        <div id="gameDashboard" class="dashboard hidden">
-            <div class="header-card">
-                <img id="gameIcon" src="" class="main-icon">
-                <div class="header-info">
-                    <h1 id="gameTitle">Loading...</h1>
-                    <p id="gameDev">By: <span id="gameCreator">...</span></p>
+        <div id="errorBox" class="error-box hidden"></div>
+
+        <div id="loader" class="loader hidden"></div>
+
+        <div id="gameUI" class="dashboard hidden">
+            <div class="profile-header">
+                <img id="gIcon" src="" class="main-img">
+                <div class="info">
+                    <h1 id="gTitle">Game Title</h1>
+                    <p class="sub">By <span id="gCreator">Creator</span></p>
                     <div class="badge-row">
-                        <span class="badge" id="gameGenre">Genre</span>
-                        <span class="badge" id="gameUpdated">Updated: Today</span>
+                        <span class="badge">Live</span>
+                        <span class="badge" id="gId">ID: 000</span>
                     </div>
                 </div>
             </div>
-
             <div class="stats-grid">
-                <div class="card">
-                    <h3>🟢 Active Players</h3>
-                    <h2 id="statPlaying">0</h2>
+                <div class="stat-card">
+                    <h3>Active Players</h3>
+                    <h2 id="gPlaying" class="accent">0</h2>
                 </div>
-                <div class="card">
+                <div class="stat-card">
                     <h3>Total Visits</h3>
-                    <h2 id="statVisits">0</h2>
+                    <h2 id="gVisits">0</h2>
                 </div>
-                <div class="card">
-                    <h3>⭐ Favorites</h3>
-                    <h2 id="statFavs">0</h2>
-                </div>
-                <div class="card">
-                    <h3>👍 Likes</h3>
-                    <h2 id="statLikes">0</h2>
+                <div class="stat-card">
+                    <h3>Favorites</h3>
+                    <h2 id="gFavs">0</h2>
                 </div>
             </div>
         </div>
 
-        <div id="userDashboard" class="dashboard hidden" style="display:none;">
-            <div class="user-profile">
-                <img id="userAvatar" src="" class="avatar-3d">
-                <div class="user-info">
-                    <h1 id="userDisplay">Display Name</h1>
-                    <h3 id="userName">@username</h3>
-                    <p id="userBio">Loading bio...</p>
-                    
-                    <div class="status-box" id="userStatusBox">
-                        <div class="status-dot" id="statusDot"></div>
-                        <span id="userStatusText">Offline</span>
-                    </div>
-                    <p id="userLocation" class="location-text"></p>
+        <div id="userUI" class="dashboard hidden">
+            <div class="profile-header">
+                <img id="uAvatar" src="" class="main-img round">
+                <div class="info">
+                    <h1 id="uDisplay">Display Name</h1>
+                    <p class="sub">@<span id="uName">username</span></p>
+                    <div id="uStatusBox" class="status-badge offline">OFFLINE</div>
+                </div>
+            </div>
+            <div class="bio-box">
+                <h3>About</h3>
+                <p id="uBio">...</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Join Date</h3>
+                    <h2 id="uJoin">...</h2>
+                </div>
+                <div class="stat-card full-width">
+                    <h3>Current Activity</h3>
+                    <h2 id="uLocation">Not in Game</h2>
                 </div>
             </div>
         </div>
