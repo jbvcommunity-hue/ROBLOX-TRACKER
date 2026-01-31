@@ -1,0 +1,99 @@
+:root {
+    --bg-dark: #232527;
+    --card-dark: #393B3D;
+    --roblox-blue: #00A2FF;
+    --text-white: #FFFFFF;
+    --text-gray: #BDBEBE;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    font-family: 'Montserrat', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar */
+.navbar {
+    background: #191B1D;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #333;
+}
+
+.logo { font-weight: 800; font-size: 24px; letter-spacing: 1px; }
+
+.tabs button {
+    background: transparent;
+    border: none;
+    color: var(--text-gray);
+    font-size: 16px;
+    margin-left: 20px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.tabs button.active { color: var(--text-white); border-bottom: 2px solid var(--roblox-blue); }
+
+/* Container */
+.container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+
+/* Search */
+.search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+input {
+    flex: 1;
+    background: var(--card-dark);
+    border: 1px solid #555;
+    padding: 15px;
+    color: white;
+    border-radius: 8px;
+    font-size: 16px;
+}
+button {
+    background: var(--roblox-blue);
+    border: none;
+    color: white;
+    padding: 0 30px;
+    border-radius: 8px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s;
+}
+button:hover { opacity: 0.9; }
+
+/* History */
+.history-bar { margin-bottom: 30px; font-size: 14px; color: var(--text-gray); }
+.history-item { 
+    background: #333; padding: 5px 10px; margin-left: 5px; 
+    border-radius: 4px; cursor: pointer; display: inline-block;
+}
+
+/* Dashboard */
+.header-card {
+    background: var(--card-dark);
+    padding: 20px;
+    border-radius: 12px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.main-icon { width: 100px; height: 100px; border-radius: 12px; object-fit: cover; }
+.avatar-3d { width: 150px; height: 150px; }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+.card {
+    background: var(--card-dark);
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+}
+.card h2 { margin: 10px 0 0; color: var(--roblox-blue); }
+.status-dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; background: gray; }
