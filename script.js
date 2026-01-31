@@ -1,129 +1,135 @@
-// REPLACE THIS WITH YOUR RENDER URL LATER (e.g., "https://my-backend.onrender.com")
+// PASTE YOUR RENDER URL HERE (No trailing slash)
 const API_BASE = "https://roblox-tracker-9jjf.onrender.com"; 
 
-let currentMode = 'game'; // or 'user'
-let trackingInterval = null;
-let lastPlayerCount = 0;
+let mode = 'game';
 
-// 1. Tab Switching
-function switchTab(mode) {
-    currentMode = mode;
-    document.getElementById('gameDashboard').style.display = mode === 'game' ? 'block' : 'none';
-    document.getElementById('userDashboard').style.display = mode === 'user' ? 'block' : 'none';
+// 1. Check Connection on Load
+window.onload = async () => {
+    const statusDiv = document.getElementById('statusIndicator');
+    try {
+        const res = await fetch(API_BASE);
+        if (res.ok) {
+            statusDiv.innerText = "✅ Server Connected";
+            statusDiv.className = "status-online";
+        }
+    } catch (e) {
+        statusDiv.innerText = "❌ Server Disconnected";
+        statusDiv.className = "status-offline";
+        showError("Could not connect to Backend. Is Render awake?");
+    }
+    loadHistory();
+};
+
+function setMode(newMode) {
+    mode = newMode;
+    document.getElementById('btnGame').className = mode === 'game' ? 'nav-btn active' : 'nav-btn';
+    document.getElementById('btnUser').className = mode === 'user' ? 'nav-btn active' : 'nav-btn';
     document.getElementById('searchInput').placeholder = mode === 'game' ? "Paste Game Link..." : "Enter Username...";
+    document.getElementById('gameUI').classList.add('hidden');
+    document.getElementById('userUI').classList.add('hidden');
+    document.getElementById('errorBox').classList.add('hidden');
 }
 
-// 2. Main Search Function
-async function handleSearch() {
-    const input = document.getElementById('searchInput').value;
+async function search() {
+    const input = document.getElementById('searchInput').value.trim();
     if (!input) return;
 
-    addToHistory(input);
-    clearInterval(trackingInterval); // Stop old tracking
+    // Show Loader, Hide UI
+    document.getElementById('loader').classList.remove('hidden');
+    document.getElementById('gameUI').classList.add('hidden');
+    document.getElementById('userUI').classList.add('hidden');
+    document.getElementById('errorBox').classList.add('hidden');
 
-    if (currentMode === 'game') {
-        fetchGameData(input);
-        trackingInterval = setInterval(() => fetchGameData(input), 20000); // Poll every 20s
-    } else {
-        fetchUserData(input);
-        trackingInterval = setInterval(() => fetchUserData(input), 20000);
-    }
-}
-
-// 3. Game Logic (Your Backend Handles the ID Conversion)
-async function fetchGameData(query) {
     try {
-        // Send whatever the user typed (URL or ID) to your backend
-        const res = await fetch(`${API_BASE}/game?query=${encodeURIComponent(query)}`);
+        const endpoint = mode === 'game' ? '/game' : '/user';
+        const res = await fetch(`${API_BASE}${endpoint}?query=${encodeURIComponent(input)}`);
         const data = await res.json();
 
-        if (data.error) { alert(data.error); return; }
-
-        // Update UI
-        document.getElementById('gameTitle').innerText = data.name;
-        document.getElementById('gameCreator').innerText = data.creator;
-        document.getElementById('gameIcon').src = data.icon;
-        
-        // Stats
-        document.getElementById('statPlaying').innerText = data.playing.toLocaleString();
-        document.getElementById('statVisits').innerText = data.visits.toLocaleString();
-        document.getElementById('statFavs').innerText = data.favorites.toLocaleString();
-        
-        // Notification Logic
-        if (lastPlayerCount > 0 && Math.abs(data.playing - lastPlayerCount) > 100) {
-            new Notification("BloxWatch Alert", { body: `Player count changed significantly: ${data.playing}` });
+        if (!data.success) {
+            throw new Error(data.error || "Unknown error");
         }
-        lastPlayerCount = data.playing;
 
-    } catch (err) {
-        console.error(err);
-    }
-}
+        addToHistory(input);
 
-// 4. User Logic
-async function fetchUserData(username) {
-    try {
-        const res = await fetch(`${API_BASE}/user?query=${encodeURIComponent(username)}`);
-        const data = await res.json();
-
-        if (data.error) { alert(data.error); return; }
-
-        document.getElementById('userDisplay').innerText = data.displayName;
-        document.getElementById('userName').innerText = `@${data.name}`;
-        document.getElementById('userBio').innerText = data.bio;
-        document.getElementById('userAvatar').src = data.avatar;
-        
-        // Presence (Online/Game)
-        const dot = document.getElementById('statusDot');
-        const statusText = document.getElementById('userStatusText');
-        const locText = document.getElementById('userLocation');
-
-        if (data.presence.userPresenceType === 2) { // In Game
-            dot.style.background = "#00FF00";
-            statusText.innerText = "Playing";
-            locText.innerText = `In: ${data.presence.lastLocation}`;
-        } else if (data.presence.userPresenceType === 1) { // Online
-            dot.style.background = "#00A2FF";
-            statusText.innerText = "Online (Website)";
-            locText.innerText = "";
+        if (mode === 'game') {
+            updateGameUI(data);
         } else {
-            dot.style.background = "gray";
-            statusText.innerText = "Offline";
-            locText.innerText = "";
+            updateUserUI(data);
         }
 
     } catch (err) {
-        console.error(err);
+        showError(err.message);
+    } finally {
+        document.getElementById('loader').classList.add('hidden');
     }
 }
 
-// 5. History System
+function updateGameUI(data) {
+    document.getElementById('gameUI').classList.remove('hidden');
+    document.getElementById('gTitle').innerText = data.name;
+    document.getElementById('gCreator').innerText = data.creator;
+    document.getElementById('gId').innerText = `ID: ${data.id}`;
+    document.getElementById('gPlaying').innerText = data.playing.toLocaleString();
+    document.getElementById('gVisits').innerText = data.visits.toLocaleString();
+    document.getElementById('gFavs').innerText = data.favorites.toLocaleString();
+    document.getElementById('gIcon').src = data.icon;
+}
+
+function updateUserUI(data) {
+    document.getElementById('userUI').classList.remove('hidden');
+    document.getElementById('uDisplay').innerText = data.displayName;
+    document.getElementById('uName').innerText = data.name;
+    document.getElementById('uBio').innerText = data.bio || "No bio available.";
+    document.getElementById('uJoin').innerText = data.created;
+    document.getElementById('uAvatar').src = data.avatar;
+
+    const statusBox = document.getElementById('uStatusBox');
+    const locationText = document.getElementById('uLocation');
+
+    if (data.isPlaying) {
+        statusBox.innerText = "PLAYING";
+        statusBox.className = "status-badge ingame";
+        locationText.innerText = `Playing: ${data.lastLocation}`;
+    } else if (data.isOnline) {
+        statusBox.innerText = "ONLINE";
+        statusBox.className = "status-badge online";
+        locationText.innerText = "Browsing Website";
+    } else {
+        statusBox.innerText = "OFFLINE";
+        statusBox.className = "status-badge offline";
+        locationText.innerText = "Last Online: Recently";
+    }
+}
+
+function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.innerText = msg;
+    box.classList.remove('hidden');
+}
+
 function addToHistory(term) {
-    let history = JSON.parse(localStorage.getItem('searchHistory') || "[]");
+    let history = JSON.parse(localStorage.getItem('bloxHistory') || "[]");
     if (!history.includes(term)) {
         history.unshift(term);
         if (history.length > 5) history.pop();
-        localStorage.setItem('searchHistory', JSON.stringify(history));
-        renderHistory();
+        localStorage.setItem('bloxHistory', JSON.stringify(history));
+        loadHistory();
     }
 }
 
-function renderHistory() {
-    const container = document.getElementById('historyList');
-    const history = JSON.parse(localStorage.getItem('searchHistory') || "[]");
-    container.innerHTML = '<span>Recent: </span>';
-    history.forEach(item => {
+function loadHistory() {
+    const bar = document.getElementById('historyBar');
+    const history = JSON.parse(localStorage.getItem('bloxHistory') || "[]");
+    bar.innerHTML = history.length ? "<span>Recent: </span>" : "";
+    
+    history.forEach(term => {
         const span = document.createElement('span');
-        span.className = 'history-item';
-        span.innerText = item;
+        span.innerText = term;
+        span.style.cssText = "background:#333; padding:2px 8px; margin:0 5px; border-radius:4px; cursor:pointer; font-size:12px;";
         span.onclick = () => {
-            document.getElementById('searchInput').value = item;
-            handleSearch();
+            document.getElementById('searchInput').value = term;
+            search();
         };
-        container.appendChild(span);
+        bar.appendChild(span);
     });
 }
-
-// Check permissions for notifications
-if (Notification.permission !== "granted") Notification.requestPermission();
-renderHistory();
