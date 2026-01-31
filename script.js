@@ -1,5 +1,5 @@
 // REPLACE THIS WITH YOUR RENDER URL LATER (e.g., "https://my-backend.onrender.com")
-const API_BASE = "https://YOUR-APP-NAME.onrender.com"; 
+const API_BASE = "https://roblox-tracker-9jjf.onrender.com"; 
 
 let currentMode = 'game'; // or 'user'
 let trackingInterval = null;
