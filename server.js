@@ -1,126 +1,115 @@
+// server.js — full ready-to-use server for Render/Heroku/etc.
+// NOTE: Do NOT commit real credentials. Use env vars in Render or a secrets manager.
+
+'use strict';
+
 const express = require('express');
 const mongoose = require('mongoose');
+const helmet = require('helmet');
 const cors = require('cors');
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
-
-const { hashPassword, comparePassword, generateSessionToken, validateSessionToken, googleOAuthConfig } = require('./auth-config');
-const { User, Game } = require('./db-schema');
 
 const app = express();
+
+// Simple middleware
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-require('dotenv').config();
+// Only load .env locally / in development:
+if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line global-require
+  require('dotenv').config();
+}
 
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+// Config
+const PORT = process.env.PORT ? Number(process.env.PORT) : 10000;
+const MONGO_ENV_NAME = 'MONGODB_URI'; // change here if your env var name differs
+const mongoUri = process.env[MONGO_ENV_NAME];
 
-const authenticate = (req, res, next) => {
-  const token = req.header('Authorization');
-  if (!token) return res.status(401).json({ error: 'Access denied' });
-  const decoded = validateSessionToken(token);
-  if (!decoded) return res.status(401).json({ error: 'Invalid token' });
-  req.user = decoded;
-  next();
-};
+// Helpful debug logging to clearly show what's set (Render logs show these)
+console.log('NODE_ENV =', process.env.NODE_ENV || 'undefined');
+console.log(`PORT = ${PORT}`);
+console.log(`${MONGO_ENV_NAME} defined =`, mongoUri ? 'yes' : 'no');
 
-app.post('/signup', async (req, res) => {
+// If mongoUri is undefined in production, fail fast with a clear log
+if (!mongoUri && process.env.NODE_ENV === 'production') {
+  console.error(`[FATAL] ${MONGO_ENV_NAME} is not set. Set it in your Render/host env vars.`);
+  // exit with non-zero so the platform marks the deploy unhealthy
+  process.exit(1);
+}
+
+// Use a dev fallback when not in production — helpful for local testing
+const effectiveUri = mongoUri || 'mongodb://127.0.0.1:27017/roblox-tracker';
+
+// Mongoose connection and server start wrapped in async init
+async function start() {
   try {
-    const { username, email, password } = req.body;
-    const hashedPassword = await hashPassword(password);
-    const user = new User({ username, email, hashedPassword });
-    await user.save();
-    res.json({ message: 'User created successfully' });
-  } catch (error) {
-    res.status(400).json({ error: 'User already exists' });
-  }
-});
+    // Connect to MongoDB
+    await mongoose.connect(effectiveUri, {
+      // options kept minimal — modern mongoose works without the older flags but these are safe
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('MongoDB connected');
 
-app.post('/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username });
-    if (!user || !await comparePassword(password, user.hashedPassword)) {
-      return res.status(400).json({ error: 'Invalid credentials' });
-    }
-    const token = generateSessionToken(user);
-    res.json({ token, user: { username: user.username } });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+    // Example simple model (so server is actually useful out of the box)
+    const PingSchema = new mongoose.Schema({ ts: { type: Date, default: Date.now } });
+    const Ping = mongoose.model('Ping', PingSchema);
 
-// Roblox proxy endpoints
-app.get('/api/roblox/place-details', async (req, res) => {
-  const placeIds = req.query.placeIds.split(',');
-  try {
-    const url = `https://games.roblox.com/v1/games/multiget-place-details?${placeIds.map(id => `placeIds=${id}`).join('&')}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch from Roblox' });
-  }
-});
+    // Health route
+    app.get('/health', async (req, res) => {
+      // quick mongo check (counts docs in tiny collection)
+      try {
+        await Ping.create({}); // keep lightweight; useful to surface write perms
+        res.json({ status: 'ok', db: 'write test succeeded' });
+      } catch (err) {
+        res.status(500).json({ status: 'error', db: err.message });
+      }
+    });
 
-app.get('/api/roblox/game-icons', async (req, res) => {
-  const universeIds = req.query.universeIds;
-  try {
-    const response = await fetch(`https://thumbnails.roblox.com/v1/games/icons?universeIds=${universeIds}&returnPolicy=PlaceHolder&size=150x150&format=Png`);
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch from Roblox' });
-  }
-});
+    // Example API route
+    app.get('/', (req, res) => {
+      res.send('ROBLOX-TRACKER server is running');
+    });
 
-app.get('/api/roblox/game-details', async (req, res) => {
-  const universeIds = req.query.universeIds;
-  try {
-    const response = await fetch(`https://games.roblox.com/v1/games?universeIds=${universeIds}`);
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch from Roblox' });
-  }
-});
+    // Error handling middleware (basic)
+    // eslint-disable-next-line no-unused-vars
+    app.use((err, req, res, next) => {
+      console.error('Unhandled error:', err);
+      res.status(500).json({ error: 'Internal Server Error' });
+    });
 
-app.get('/api/roblox/user-details', async (req, res) => {
-  const userId = req.query.userId;
-  try {
-    const response = await fetch(`https://users.roblox.com/v1/users/${userId}`);
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch from Roblox' });
-  }
-});
+    const server = app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
 
-app.get('/api/roblox/user-headshot', async (req, res) => {
-  const userIds = req.query.userIds;
-  try {
-    const response = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userIds}&size=150x150&format=Png`);
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch from Roblox' });
-  }
-});
+    // Graceful shutdown on SIGINT/SIGTERM
+    const shutdown = async (signal) => {
+      console.log(`Received ${signal}. Closing http server and mongoose connection...`);
+      server.close(async () => {
+        try {
+          await mongoose.disconnect();
+          console.log('Mongoose disconnected.');
+          process.exit(0);
+        } catch (e) {
+          console.error('Error during mongoose.disconnect:', e);
+          process.exit(1);
+        }
+      });
 
-// Total players scrape
-app.get('/api/players', async (req, res) => {
-  try {
-    const response = await fetch('https://romonitorstats.com/');
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    const peakText = $('h4:contains("Peak Concurrent Users")').text().trim();
-    const match = peakText.match(/(\d+\.\d+)M/);
-    const count = match ? parseFloat(match[1]) * 1000000 : 3000000;
-    res.json({ playerCount: Math.floor(count) });
-  } catch (error) {
-    res.json({ playerCount: 3000000 });
-  }
-});
+      // Force exit if still not closed after a timeout
+      setTimeout(() => {
+        console.error('Forcing shutdown.');
+        process.exit(1);
+      }, 10000).unref();
+    };
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Server running on port ${port}`));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+  } catch (err) {
+    console.error('Startup error:', err);
+    process.exit(1);
+  }
+}
+
+start();
