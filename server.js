@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 
 const { hashPassword, comparePassword, generateSessionToken, validateSessionToken, googleOAuthConfig } = require('./auth-config');
-const { User, Game } = require('./db-schema'); // DeveloperKey not used yet
+const { User, Game } = require('./db-schema');
 
 const app = express();
 app.use(cors());
@@ -50,7 +50,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Roblox proxy endpoints (unchanged from previous)
+// Roblox proxy endpoints
 app.get('/api/roblox/place-details', async (req, res) => {
   const placeIds = req.query.placeIds.split(',');
   try {
@@ -107,16 +107,16 @@ app.get('/api/roblox/user-headshot', async (req, res) => {
   }
 });
 
-// Total players scrape
+// Total players scrape from better source
 app.get('/api/players', async (req, res) => {
   try {
-    const response = await fetch('https://romonitorstats.com/');
+    const response = await fetch('https://www.playerauctions.com/player-count/roblox');
     const html = await response.text();
     const $ = cheerio.load(html);
-    const countText = $('div:contains("Peak Concurrent Users")').text(); // Adjust if needed
-    const match = countText.match(/(\d+\.\d+)M Peak Concurrent Users/);
-    const count = match ? parseFloat(match[1]) * 1000000 : 3000000;
-    res.json({ playerCount: Math.floor(count) });
+    const countText = $('div:contains("player count for")').text(); // Adjust selector if needed
+    const match = countText.match(/estimated to be ([\d,]+) players/);
+    const count = match ? parseInt(match[1].replace(/,/g, '')) : 3000000;
+    res.json({ playerCount: count });
   } catch (error) {
     res.json({ playerCount: 3000000 });
   }
