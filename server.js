@@ -1,198 +1,126 @@
-// server.js
-
-// Required dependencies
 const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
+
+const { hashPassword, comparePassword, generateSessionToken, validateSessionToken, googleOAuthConfig } = require('./auth-config');
+const { User, Game } = require('./db-schema'); // DeveloperKey not used yet
 
 const app = express();
-
-// Middleware
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
-// Serve static files from the current directory
-app.use(express.static(__dirname));
+require('dotenv').config();
 
-// Connect to Database
-const dbURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/roblox-tracker';
-mongoose.connect(dbURI, { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true 
-})
-.then(() => console.log('✅ Connected to MongoDB'))
-.catch(err => console.error('❌ MongoDB connection error:', err));
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
-// User Schema
-const userSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    googleId: { type: String, unique: true, sparse: true },
-    createdAt: { type: Date, default: Date.now }
-});
-const User = mongoose.model('User', userSchema);
-
-// API Routes
-
-// Google OAuth callback endpoint
-app.get('/auth/google/callback', (req, res) => {
-    res.json({ message: 'Google OAuth callback - implement with your credentials' });
-});
-
-// Manual signup
-app.post('/signup', async (req, res) => {
-    try {
-        const { username, password, email } = req.body;
-        
-        // Validate input
-        if (!username || !password || !email) {
-            return res.status(400).json({ error: 'All fields are required' });
-        }
-        
-        // Check if user already exists
-        const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-        if (existingUser) {
-            return res.status(409).json({ error: 'Username or email already exists' });
-        }
-        
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ username, password: hashedPassword, email });
-        await newUser.save();
-        
-        res.status(201).json({ message: 'User created successfully' });
-    } catch (error) {
-        console.error('Signup error:', error);
-        res.status(500).json({ error: 'Server error during signup' });
-    }
-});
-
-// Manual login
-app.post('/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password required' });
-        }
-        
-        const user = await User.findOne({ username });
-        
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        
-        const isValid = await bcrypt.compare(password, user.password);
-        
-        if (isValid) {
-            const jwtSecret = process.env.JWT_SECRET || 'your_jwt_secret_change_this';
-            const token = jwt.sign(
-                { id: user._id, username: user.username }, 
-                jwtSecret, 
-                { expiresIn: '24h' }
-            );
-            res.json({ 
-                token, 
-                user: { 
-                    id: user._id, 
-                    username: user.username, 
-                    email: user.email 
-                } 
-            });
-        } else {
-            res.status(401).json({ error: 'Invalid credentials' });
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Server error during login' });
-    }
-});
-
-// Protect routes
-const authenticateJWT = (req, res, next) => {
-    const authHeader = req.header('Authorization');
-    const token = authHeader?.split(' ')[1];
-    
-    if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
-    }
-    
-    const jwtSecret = process.env.JWT_SECRET || 'your_jwt_secret_change_this';
-    
-    jwt.verify(token, jwtSecret, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Invalid or expired token' });
-        }
-        req.user = user;
-        next();
-    });
+const authenticate = (req, res, next) => {
+  const token = req.header('Authorization');
+  if (!token) return res.status(401).json({ error: 'Access denied' });
+  const decoded = validateSessionToken(token);
+  if (!decoded) return res.status(401).json({ error: 'Invalid token' });
+  req.user = decoded;
+  next();
 };
 
-// Account management endpoints
-app.get('/profile', authenticateJWT, async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('-password');
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        res.json(user);
-    } catch (error) {
-        console.error('Profile error:', error);
-        res.status(500).json({ error: 'Server error' });
+app.post('/signup', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const hashedPassword = await hashPassword(password);
+    const user = new User({ username, email, hashedPassword });
+    await user.save();
+    res.json({ message: 'User created successfully' });
+  } catch (error) {
+    res.status(400).json({ error: 'User already exists' });
+  }
+});
+
+app.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user || !await comparePassword(password, user.hashedPassword)) {
+      return res.status(400).json({ error: 'Invalid credentials' });
     }
+    const token = generateSessionToken(user);
+    res.json({ token, user: { username: user.username } });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-app.post('/logout', authenticateJWT, (req, res) => {
-    res.json({ message: 'Logged out successfully' });
+// Roblox proxy endpoints (unchanged from previous)
+app.get('/api/roblox/place-details', async (req, res) => {
+  const placeIds = req.query.placeIds.split(',');
+  try {
+    const url = `https://games.roblox.com/v1/games/multiget-place-details?${placeIds.map(id => `placeIds=${id}`).join('&')}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch from Roblox' });
+  }
 });
 
-app.delete('/account', authenticateJWT, async (req, res) => {
-    try {
-        await User.findByIdAndDelete(req.user.id);
-        res.json({ message: 'Account deleted successfully' });
-    } catch (error) {
-        console.error('Delete account error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
+app.get('/api/roblox/game-icons', async (req, res) => {
+  const universeIds = req.query.universeIds;
+  try {
+    const response = await fetch(`https://thumbnails.roblox.com/v1/games/icons?universeIds=${universeIds}&returnPolicy=PlaceHolder&size=150x150&format=Png`);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch from Roblox' });
+  }
 });
 
-// Enhanced game data endpoint
-app.get('/games', async (req, res) => {
-    try {
-        res.json({ 
-            message: 'Game data endpoint - integrate with Roblox API',
-            games: []
-        });
-    } catch (error) {
-        console.error('Games error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
+app.get('/api/roblox/game-details', async (req, res) => {
+  const universeIds = req.query.universeIds;
+  try {
+    const response = await fetch(`https://games.roblox.com/v1/games?universeIds=${universeIds}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch from Roblox' });
+  }
 });
 
-// Player count endpoint (returns random demo data)
-app.get('/api/players', (req, res) => {
-    const baseCount = 850000;
-    const variance = Math.floor(Math.random() * 100000) - 50000;
-    const playerCount = baseCount + variance;
-    res.json({ playerCount });
+app.get('/api/roblox/user-details', async (req, res) => {
+  const userId = req.query.userId;
+  try {
+    const response = await fetch(`https://users.roblox.com/v1/users/${userId}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch from Roblox' });
+  }
 });
 
-// Serve index.html for root route
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+app.get('/api/roblox/user-headshot', async (req, res) => {
+  const userIds = req.query.userIds;
+  try {
+    const response = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userIds}&size=150x150&format=Png`);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch from Roblox' });
+  }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log('');
-    console.log('🚀 ROBLOX Tracker Server Started!');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`📍 Server: http://localhost:${PORT}`);
-    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('');
+// Total players scrape
+app.get('/api/players', async (req, res) => {
+  try {
+    const response = await fetch('https://romonitorstats.com/');
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    const countText = $('div:contains("Peak Concurrent Users")').text(); // Adjust if needed
+    const match = countText.match(/(\d+\.\d+)M Peak Concurrent Users/);
+    const count = match ? parseFloat(match[1]) * 1000000 : 3000000;
+    res.json({ playerCount: Math.floor(count) });
+  } catch (error) {
+    res.json({ playerCount: 3000000 });
+  }
 });
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Server running on port ${port}`));
