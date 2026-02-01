@@ -1,5 +1,5 @@
-// server.js — full ready-to-use server for Render/Heroku/etc.
-// NOTE: Do NOT commit real credentials. Use env vars in Render or a secrets manager.
+// server.js
+// Full, minimal, production-safe Express + Mongoose server
 
 'use strict';
 
@@ -10,106 +10,75 @@ const cors = require('cors');
 
 const app = express();
 
-// Simple middleware
+/* -------------------- middleware -------------------- */
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// Only load .env locally / in development:
-if (process.env.NODE_ENV !== 'production') {
-  // eslint-disable-next-line global-require
-  require('dotenv').config();
-}
+/* -------------------- config -------------------- */
+const PORT = Number(process.env.PORT || 10000);
+const MONGODB_URI = process.env.MONGODB_URI;
 
-// Config
-const PORT = process.env.PORT ? Number(process.env.PORT) : 10000;
-const MONGO_ENV_NAME = 'MONGODB_URI'; // change here if your env var name differs
-const mongoUri = process.env[MONGO_ENV_NAME];
-
-// Helpful debug logging to clearly show what's set (Render logs show these)
+/* -------------------- startup logs -------------------- */
 console.log('NODE_ENV =', process.env.NODE_ENV || 'undefined');
-console.log(`PORT = ${PORT}`);
-console.log(`${MONGO_ENV_NAME} defined =`, mongoUri ? 'yes' : 'no');
+console.log('PORT =', PORT);
+console.log('MONGODB_URI defined =', MONGODB_URI ? 'yes' : 'no');
 
-// If mongoUri is undefined in production, fail fast with a clear log
-if (!mongoUri && process.env.NODE_ENV === 'production') {
-  console.error(`[FATAL] ${MONGO_ENV_NAME} is not set. Set it in your Render/host env vars.`);
-  // exit with non-zero so the platform marks the deploy unhealthy
+/* -------------------- hard fail if missing -------------------- */
+if (!MONGODB_URI) {
+  console.error('[FATAL] MONGODB_URI is not set in environment variables');
   process.exit(1);
 }
 
-// Use a dev fallback when not in production — helpful for local testing
-const effectiveUri = mongoUri || 'mongodb://127.0.0.1:27017/roblox-tracker';
-
-// Mongoose connection and server start wrapped in async init
-async function start() {
+/* -------------------- database + server start -------------------- */
+async function startServer() {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(effectiveUri, {
-      // options kept minimal — modern mongoose works without the older flags but these are safe
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    // Connect to MongoDB (no deprecated options)
+    await mongoose.connect(MONGODB_URI);
     console.log('MongoDB connected');
 
-    // Example simple model (so server is actually useful out of the box)
-    const PingSchema = new mongoose.Schema({ ts: { type: Date, default: Date.now } });
-    const Ping = mongoose.model('Ping', PingSchema);
+    /* -------------------- routes -------------------- */
 
-    // Health route
-    app.get('/health', async (req, res) => {
-      // quick mongo check (counts docs in tiny collection)
-      try {
-        await Ping.create({}); // keep lightweight; useful to surface write perms
-        res.json({ status: 'ok', db: 'write test succeeded' });
-      } catch (err) {
-        res.status(500).json({ status: 'error', db: err.message });
-      }
-    });
-
-    // Example API route
     app.get('/', (req, res) => {
       res.send('ROBLOX-TRACKER server is running');
     });
 
-    // Error handling middleware (basic)
-    // eslint-disable-next-line no-unused-vars
-    app.use((err, req, res, next) => {
-      console.error('Unhandled error:', err);
-      res.status(500).json({ error: 'Internal Server Error' });
+    app.get('/health', (req, res) => {
+      res.json({
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+      });
     });
 
+    /* -------------------- start listening -------------------- */
     const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
 
-    // Graceful shutdown on SIGINT/SIGTERM
+    /* -------------------- graceful shutdown -------------------- */
     const shutdown = async (signal) => {
-      console.log(`Received ${signal}. Closing http server and mongoose connection...`);
+      console.log(`Received ${signal}. Shutting down...`);
       server.close(async () => {
         try {
           await mongoose.disconnect();
-          console.log('Mongoose disconnected.');
+          console.log('MongoDB disconnected');
           process.exit(0);
-        } catch (e) {
-          console.error('Error during mongoose.disconnect:', e);
+        } catch (err) {
+          console.error('Error during shutdown:', err);
           process.exit(1);
         }
       });
-
-      // Force exit if still not closed after a timeout
-      setTimeout(() => {
-        console.error('Forcing shutdown.');
-        process.exit(1);
-      }, 10000).unref();
     };
 
-    process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+
   } catch (err) {
-    console.error('Startup error:', err);
+    console.error('MongoDB connection failed');
+    console.error(err.message);
     process.exit(1);
   }
 }
 
-start();
+startServer();
