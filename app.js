@@ -6,7 +6,7 @@ let authToken = null;
 const API_URL = CONFIG.BACKEND_URL;
 
 // Check if backend URL is configured
-if (API_URL === 'YOUR_BACKEND_URL_HERE') {
+if (API_URL === 'https://roblox-tracker-9jjf.onrender.com') {
     console.warn('WARNING: Backend URL not configured! Please edit config.js with your backend server URL');
 }
 
