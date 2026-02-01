@@ -6,9 +6,12 @@ let authToken = null;
 const API_URL = CONFIG.BACKEND_URL;
 
 // Check if backend URL is configured
-if (API_URL === 'YOUR_BACKEND_URL_HERE') {
-    console.warn('⚠️ WARNING: Backend URL not configured! Please edit config.js with your backend server URL');
+if (API_URL === 'https://roblox-tracker-9jjf.onrender.com') {
+    console.warn('WARNING: Backend URL not configured! Please edit config.js with your backend server URL');
 }
+
+// Default place IDs for popular games
+const defaultPlaceIds = [920587237, 4924922222, 2753915549, 1962086868, 370731277, 142823291, 606849621, 286090429];
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -20,23 +23,27 @@ document.addEventListener('DOMContentLoaded', () => {
 function checkAuth() {
     authToken = localStorage.getItem('authToken');
     const username = localStorage.getItem('username');
-    
+    const isGuest = localStorage.getItem('guestMode') === 'true';
+
     if (authToken && username) {
         currentUser = { username };
-        // If on login/signup page, redirect to main app
-        if (window.location.pathname.includes('log-in') || window.location.pathname.includes('sign-up')) {
-            window.location.href = '/';
-        } else {
-            showApp();
-        }
+        localStorage.removeItem('guestMode'); // Clear guest if logged in
+        redirectToApp();
+    } else if (isGuest) {
+        currentUser = { username: 'Guest' };
+        redirectToApp();
     } else {
-        // If on main page but not logged in, redirect to login
         if (!window.location.pathname.includes('log-in') && !window.location.pathname.includes('sign-up')) {
-            // Only redirect if we're on the main page
-            if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-                window.location.href = '/log-in.html';
-            }
+            window.location.href = './log-in.html';
         }
+    }
+}
+
+function redirectToApp() {
+    if (window.location.pathname.includes('log-in') || window.location.pathname.includes('sign-up')) {
+        window.location.href = './index.html';
+    } else {
+        showApp();
     }
 }
 
@@ -72,26 +79,47 @@ function setupEventListeners() {
         logoutBtn.addEventListener('click', handleLogout);
     }
     
-    // Search
+    // Game Search
     const searchInput = document.getElementById('game-search');
     if (searchInput) {
-        searchInput.addEventListener('input', handleSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleGameSearch({ target: searchInput });
+        });
     }
+    const gameSearchBtn = document.getElementById('game-search-btn');
+    if (gameSearchBtn) {
+        gameSearchBtn.addEventListener('click', () => handleGameSearch({ target: document.getElementById('game-search') }));
+    }
+
+    // User Search
+    const userSearchInput = document.getElementById('user-search');
+    if (userSearchInput) {
+        userSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleUserSearch();
+        });
+    }
+    const userSearchBtn = document.getElementById('user-search-btn');
+    if (userSearchBtn) {
+        userSearchBtn.addEventListener('click', handleUserSearch);
+    }
+
+    // Guest button
+    const guestBtn = document.getElementById('guest-btn');
+    if (guestBtn) { guestBtn.addEventListener('click', handleGuest); }
 }
 
-// Clear error messages
+// Clear errors
 function clearErrors() {
     const loginError = document.getElementById('login-error');
     const signupError = document.getElementById('signup-error');
+    const searchError = document.getElementById('search-error');
     
-    if (loginError) {
-        loginError.classList.remove('show');
-        loginError.textContent = '';
-    }
-    if (signupError) {
-        signupError.classList.remove('show');
-        signupError.textContent = '';
-    }
+    [loginError, signupError, searchError].forEach(el => {
+        if (el) {
+            el.classList.remove('show');
+            el.textContent = '';
+        }
+    });
 }
 
 // Show error message
@@ -103,7 +131,7 @@ function showError(elementId, message) {
     }
 }
 
-// Handle Login
+// Handle Login (unchanged)
 async function handleLogin() {
     clearErrors();
     
@@ -137,21 +165,20 @@ async function handleLogin() {
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('username', currentUser.username);
             
-            // Redirect to main app
-            window.location.href = '/';
+            window.location.href = './index.html';
         } else {
             showError('login-error', data.error || 'Login failed');
         }
     } catch (error) {
         console.error('Login error:', error);
-        showError('login-error', '❌ Network error. Check if your backend server is running and the URL in config.js is correct.');
+        showError('login-error', 'Network error. Check if your backend server is running and the URL in config.js is correct.');
     } finally {
         submitBtn.textContent = 'Login';
         submitBtn.disabled = false;
     }
 }
 
-// Handle Signup
+// Handle Signup (unchanged)
 async function handleSignup() {
     clearErrors();
     
@@ -198,32 +225,38 @@ async function handleSignup() {
         const data = await response.json();
         
         if (response.ok) {
-            // Account created, redirect to login
-            window.location.href = '/log-in.html?success=Account created! Please log in.';
+            window.location.href = './log-in.html?success=Account created! Please log in.';
         } else {
             showError('signup-error', data.error || 'Signup failed');
         }
     } catch (error) {
         console.error('Signup error:', error);
-        showError('signup-error', '❌ Network error. Check if your backend server is running and the URL in config.js is correct.');
+        showError('signup-error', 'Network error. Check if your backend server is running and the URL in config.js is correct.');
     } finally {
         submitBtn.textContent = 'Create Account';
         submitBtn.disabled = false;
     }
 }
 
+// Handle Guest
+function handleGuest() {
+    localStorage.setItem('guestMode', 'true');
+    window.location.href = './index.html';
+}
+
 // Handle Logout
 function handleLogout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('username');
+    localStorage.removeItem('guestMode');
     authToken = null;
     currentUser = null;
-    
-    window.location.href = '/log-in.html';
+    window.location.href = './log-in.html';
 }
 
-// Show app (for main page only)
+// Show app
 function showApp() {
+    const path = window.location.pathname;
     const app = document.getElementById('app');
     if (app) {
         app.classList.remove('hidden');
@@ -235,116 +268,260 @@ function showApp() {
             }
         }
         
-        loadGames();
-        startPlayerCountUpdate();
+        if (path.includes('game-detail')) {
+            loadGameDetail();
+        } else if (path.includes('user-detail')) {
+            loadUserDetail();
+        } else {
+            loadGames();
+            startPlayerCountUpdate();
+        }
     }
 }
 
 // Load Games
-function loadGames() {
+async function loadGames(placeIds = defaultPlaceIds) {
     const gamesContainer = document.getElementById('games-list');
     if (!gamesContainer) return;
-    
-    // Sample ROBLOX game data
-    const games = [
-        { id: 1, name: 'Adopt Me!', icon: '🐾', players: 245678, visits: '45.2B' },
-        { id: 2, name: 'Brookhaven', icon: '🏡', players: 189234, visits: '32.8B' },
-        { id: 3, name: 'Tower of Hell', icon: '🗼', players: 156789, visits: '28.1B' },
-        { id: 4, name: 'Blox Fruits', icon: '🍊', players: 234567, visits: '41.3B' },
-        { id: 5, name: 'Pet Simulator X', icon: '🐶', players: 145678, visits: '25.4B' },
-        { id: 6, name: 'Murder Mystery 2', icon: '🔪', players: 98765, visits: '18.9B' },
-        { id: 7, name: 'Jailbreak', icon: '🚔', players: 87654, visits: '16.2B' },
-        { id: 8, name: 'Arsenal', icon: '🔫', players: 76543, visits: '14.7B' },
-    ];
-    
-    gamesContainer.innerHTML = games.map(game => `
-        <div class="game-card" data-game-id="${game.id}">
-            <div class="game-thumbnail">${game.icon}</div>
-            <div class="game-info">
-                <h3 class="game-title">${game.name}</h3>
-                <div class="game-stats">
-                    <div class="game-stat">
-                        <div class="live-indicator"></div>
-                        <span>${formatNumber(game.players)}</span>
-                    </div>
-                    <div class="game-stat">
-                        👁️ <span>${game.visits}</span>
+
+    try {
+        const placeDetailsRes = await fetch(`${API_URL}/api/roblox/place-details?placeIds=${placeIds.join(',')}`);
+        const placeDetails = await placeDetailsRes.json();
+
+        const universeIds = placeDetails.map(p => p.universeId).join(',');
+        const iconsRes = await fetch(`${API_URL}/api/roblox/game-icons?universeIds=${universeIds}`);
+        const icons = await iconsRes.json();
+
+        const games = placeDetails.map(p => ({
+            placeId: p.placeId,
+            name: p.name,
+            players: p.playing,
+            visits: p.placeVisits,
+            icon: icons.data.find(i => i.targetId === p.universeId)?.imageUrl || 'placeholder.png'
+        }));
+
+        gamesContainer.innerHTML = games.map(game => `
+            <div class="game-card" data-place-id="${game.placeId}">
+                <img class="game-thumbnail" src="${game.icon}" alt="${game.name}">
+                <div class="game-info">
+                    <h3 class="game-title">${game.name}</h3>
+                    <div class="game-stats">
+                        <div class="game-stat">
+                            <div class="live-indicator"></div>
+                            <span id="players-${game.placeId}">${formatNumber(game.players)}</span>
+                        </div>
+                        <div class="game-stat">
+                            Eye <span>${formatNumber(game.visits)}</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    `).join('');
-}
+        `).join('');
 
-// Update player count
-let playerCountInterval;
-function startPlayerCountUpdate() {
-    updatePlayerCount();
-    playerCountInterval = setInterval(updatePlayerCount, 5000);
-}
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const placeId = card.dataset.placeId;
+                window.location.href = `./game-detail.html?placeId=${placeId}`;
+            });
+        });
 
-async function updatePlayerCount() {
-    try {
-        const response = await fetch(`${API_URL}/api/players`);
-        const data = await response.json();
-        
-        const totalPlayers = document.getElementById('total-players');
-        if (totalPlayers) {
-            const currentCount = parseInt(totalPlayers.textContent.replace(/,/g, '')) || 0;
-            const newCount = data.playerCount;
-            
-            animateNumber('total-players', currentCount, newCount, 1000);
-        }
     } catch (error) {
-        console.error('Error fetching player count:', error);
+        console.error('Error loading games:', error);
+        showError('search-error', 'Failed to load games. Check network.');
     }
 }
 
-// Animate number change
+// Update player counts
+let playerCountInterval;
+function startPlayerCountUpdate() {
+    updatePlayerCounts();
+    playerCountInterval = setInterval(updatePlayerCounts, 10000);
+}
+
+async function updatePlayerCounts() {
+    try {
+        const totalRes = await fetch(`${API_URL}/api/players`);
+        const totalData = await totalRes.json();
+        const totalPlayers = document.getElementById('total-players');
+        if (totalPlayers) {
+            const current = parseInt(totalPlayers.textContent.replace(/,/g, '')) || 0;
+            animateNumber('total-players', current, totalData.playerCount, 500);
+        }
+
+        const placeIds = defaultPlaceIds;
+        const placeDetailsRes = await fetch(`${API_URL}/api/roblox/place-details?placeIds=${placeIds.join(',')}`);
+        const placeDetails = await placeDetailsRes.json();
+
+        placeDetails.forEach(p => {
+            const elem = document.getElementById(`players-${p.placeId}`);
+            if (elem) {
+                const current = parseInt(elem.textContent.replace(/,/g, '')) || 0;
+                animateNumber(`players-${p.placeId}`, current, p.playing, 500);
+            }
+        });
+    } catch (error) {
+        console.error('Error updating player counts:', error);
+    }
+}
+
+// Animate number
 function animateNumber(elementId, start, end, duration) {
     const element = document.getElementById(elementId);
     if (!element) return;
     
-    const startTime = Date.now();
-    const difference = end - start;
-    
-    function update() {
-        const now = Date.now();
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        const current = Math.floor(start + (difference * progress));
+    const stepTime = Math.abs(Math.floor(duration / (end - start))) || 1;
+    let current = start;
+    const interval = setInterval(() => {
+        if (current < end) current++;
+        else if (current > end) current--;
         element.textContent = formatNumber(current);
-        
-        if (progress < 1) {
-            requestAnimationFrame(update);
-        }
-    }
-    
-    requestAnimationFrame(update);
+        if (current === end) clearInterval(interval);
+    }, stepTime);
 }
 
-// Format number with commas
+// Format number
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-// Handle search
-function handleSearch(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const gameCards = document.querySelectorAll('.game-card');
-    
-    gameCards.forEach(card => {
-        const gameName = card.querySelector('.game-title').textContent.toLowerCase();
-        if (gameName.includes(searchTerm)) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
-        }
-    });
+// Handle Game Search
+async function handleGameSearch(e) {
+    clearErrors();
+    const input = e.target.value.trim().toLowerCase();
+
+    if (input === '') {
+        loadGames();
+        return;
+    }
+
+    let placeId;
+    if (!isNaN(input)) {
+        placeId = input;
+    } else if (input.includes('roblox.com/games/')) {
+        const match = input.match(/games\/(\d+)/);
+        if (match) placeId = match[1];
+    }
+
+    if (placeId) {
+        window.location.href = `./game-detail.html?placeId=${placeId}`;
+    } else {
+        const gameCards = document.querySelectorAll('.game-card');
+        gameCards.forEach(card => {
+            const gameName = card.querySelector('.game-title').textContent.toLowerCase();
+            card.style.display = gameName.includes(input) ? 'block' : 'none';
+        });
+    }
 }
 
-// Show success message from URL parameter (for login page after signup)
+// Handle User Search
+async function handleUserSearch() {
+    clearErrors();
+    const input = document.getElementById('user-search').value.trim();
+    const btn = document.getElementById('user-search-btn');
+    if (btn) btn.disabled = true;
+
+    if (!input) {
+        showError('search-error', 'Enter a user ID');
+        if (btn) btn.disabled = false;
+        return;
+    }
+
+    if (!isNaN(input)) {
+        try {
+            // Check if user exists
+            const res = await fetch(`${API_URL}/api/roblox/user-details?userId=${input}`);
+            if (res.ok) {
+                window.location.href = `./user-detail.html?userId=${input}`;
+            } else {
+                showError('search-error', 'User not found');
+            }
+        } catch (error) {
+            showError('search-error', 'Network error');
+        }
+    } else {
+        showError('search-error', 'Enter a valid user ID');
+    }
+
+    if (btn) btn.disabled = false;
+}
+
+// Load Game Detail
+async function loadGameDetail() {
+    const params = new URLSearchParams(window.location.search);
+    const placeId = params.get('placeId');
+    if (!placeId) return;
+
+    const detailContainer = document.getElementById('game-detail');
+    if (!detailContainer) return;
+
+    try {
+        const placeRes = await fetch(`${API_URL}/api/roblox/place-details?placeIds=${placeId}`);
+        const placeData = (await placeRes.json())[0];
+
+        const universeId = placeData.universeId;
+        const gameRes = await fetch(`${API_URL}/api/roblox/game-details?universeIds=${universeId}`);
+        const gameData = (await gameRes.json()).data[0];
+
+        const iconRes = await fetch(`${API_URL}/api/roblox/game-icons?universeIds=${universeId}`);
+        const icon = (await iconRes.json()).data[0].imageUrl;
+
+        detailContainer.innerHTML = `
+            <img src="${icon}" alt="${gameData.name}">
+            <h2>${gameData.name}</h2>
+            <p>Description: ${gameData.description}</p>
+            <p>Creator: ${gameData.creator.name}</p>
+            <p>Playing: <span id="playing-count">${formatNumber(placeData.playing)}</span></p>
+            <p>Visits: ${formatNumber(placeData.placeVisits)}</p>
+            <p>Favorites: ${formatNumber(gameData.favoritedCount)}</p>
+            <p>Genre: ${gameData.genre}</p>
+            <p>Created: ${new Date(gameData.created).toLocaleDateString()}</p>
+        `;
+
+        setInterval(async () => {
+            const updatedRes = await fetch(`${API_URL}/api/roblox/place-details?placeIds=${placeId}`);
+            const updated = (await updatedRes.json())[0];
+            const elem = document.getElementById('playing-count');
+            const current = parseInt(elem.textContent.replace(/,/g, '')) || 0;
+            animateNumber('playing-count', current, updated.playing, 500);
+        }, 10000);
+
+    } catch (error) {
+        console.error('Error loading game detail:', error);
+        detailContainer.innerHTML = '<p>Error loading game details.</p>';
+    }
+}
+
+// Load User Detail
+async function loadUserDetail() {
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get('userId');
+    if (!userId) return;
+
+    const detailContainer = document.getElementById('user-detail');
+    if (!detailContainer) return;
+
+    try {
+        const userRes = await fetch(`${API_URL}/api/roblox/user-details?userId=${userId}`);
+        const userData = await userRes.json();
+
+        const headshotRes = await fetch(`${API_URL}/api/roblox/user-headshot?userIds=${userId}`);
+        const headshot = (await headshotRes.json()).data[0].imageUrl;
+
+        detailContainer.innerHTML = `
+            <img src="${headshot}" alt="${userData.name}">
+            <h2>${userData.displayName} (@${userData.name})</h2>
+            <p>Description: ${userData.description}</p>
+            <p>Created: ${new Date(userData.created).toLocaleDateString()}</p>
+            <p>Banned: ${userData.isBanned ? 'Yes' : 'No'}</p>
+        `;
+
+    } catch (error) {
+        console.error('Error loading user detail:', error);
+        detailContainer.innerHTML = '<p>Error loading user details.</p>';
+    }
+}
+
+// Show success message from URL parameter
 if (window.location.pathname.includes('log-in')) {
     const urlParams = new URLSearchParams(window.location.search);
     const successMsg = urlParams.get('success');
@@ -352,7 +529,7 @@ if (window.location.pathname.includes('log-in')) {
         setTimeout(() => {
             const loginError = document.getElementById('login-error');
             if (loginError) {
-                loginError.textContent = '✅ ' + successMsg;
+                loginError.textContent = successMsg;
                 loginError.style.background = 'rgba(0, 230, 118, 0.1)';
                 loginError.style.borderLeftColor = '#00e676';
                 loginError.style.color = '#00e676';
@@ -362,7 +539,7 @@ if (window.location.pathname.includes('log-in')) {
     }
 }
 
-// Cleanup on page unload
+// Cleanup
 window.addEventListener('beforeunload', () => {
     if (playerCountInterval) {
         clearInterval(playerCountInterval);

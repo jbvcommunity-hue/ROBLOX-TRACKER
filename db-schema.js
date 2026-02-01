@@ -2,16 +2,11 @@ const mongoose = require('mongoose');
 
 // User Schema
 const UserSchema = new mongoose.Schema({
-    id: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
-    displayName: { type: String, required: true },
-    avatar: { type: String },
-    hashedPassword: { type: String, required: true },
+    username: { type: String, unique: true },
+    email: { type: String, unique: true },
+    hashedPassword: String,
     googleId: { type: String, unique: true },
-    createdAt: { type: Date, default: Date.now },
-    preferences: { type: Object },
-    sessionToken: { type: String },
-    sessionExpiry: { type: Date }
+    createdAt: { type: Date, default: Date.now }
 });
 
 // Game Schema
