@@ -107,16 +107,16 @@ app.get('/api/roblox/user-headshot', async (req, res) => {
   }
 });
 
-// Total players scrape from better source
+// Total players scrape
 app.get('/api/players', async (req, res) => {
   try {
-    const response = await fetch('https://www.playerauctions.com/player-count/roblox');
+    const response = await fetch('https://romonitorstats.com/');
     const html = await response.text();
     const $ = cheerio.load(html);
-    const countText = $('div:contains("player count for")').text(); // Adjust selector if needed
-    const match = countText.match(/estimated to be ([\d,]+) players/);
-    const count = match ? parseInt(match[1].replace(/,/g, '')) : 3000000;
-    res.json({ playerCount: count });
+    const peakText = $('h4:contains("Peak Concurrent Users")').text().trim();
+    const match = peakText.match(/(\d+\.\d+)M/);
+    const count = match ? parseFloat(match[1]) * 1000000 : 3000000;
+    res.json({ playerCount: Math.floor(count) });
   } catch (error) {
     res.json({ playerCount: 3000000 });
   }
